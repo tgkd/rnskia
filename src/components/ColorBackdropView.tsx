@@ -15,12 +15,10 @@ const isGradientProps = (value: any): value is GradientProps => {
 };
 
 export function ColorBackdropView({
-  width,
-  height,
   params,
+  canvasSize: { width, height },
 }: {
-  width: number;
-  height: number;
+  canvasSize: { width: number; height: number };
   params: Variant['backdrop'];
 }) {
   if (!params) {

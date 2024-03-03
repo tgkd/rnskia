@@ -1,14 +1,18 @@
-import {
-  Canvas,
-  Text,
-  useCanvasRef,
-  useFonts,
-} from '@shopify/react-native-skia';
+import { Canvas, useCanvasRef, useFonts } from '@shopify/react-native-skia';
 import React, { useState } from 'react';
-import { ActivityIndicator, Share, StyleSheet, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Share,
+  StyleSheet,
+  View,
+  Button,
+  TextInput,
+} from 'react-native';
+import { launchImageLibrary } from 'react-native-image-picker';
 
 import { useElementsContext } from '../contexts/EditorElementsContext';
 import { TextView } from './TextView';
+import { ImageView } from './ImageView';
 import { ColorBackdropView } from './ColorBackdropView';
 import { GestureHandler } from './GestureHandler';
 
@@ -31,11 +35,34 @@ export function Editor() {
     'Free templates for social media posts',
   );
   const [title, setTitle] = useState('Designed by you!');
+  const [uploadedImg, setUploadedImg] = useState('');
 
   const submit = () => {
     const img = ref.current!.makeImageSnapshot().encodeToBase64();
     const data = `data:image/png;base64,${img}`;
     Share.share({ url: data });
+  };
+
+  const uploadImg = () => {
+    launchImageLibrary(
+      {
+        mediaType: 'photo',
+        includeBase64: true,
+      },
+      response => {
+        if (response.assets) {
+          setUploadedImg(response.assets[0].base64!);
+          return;
+        }
+        if (response.didCancel) {
+          console.log('User cancelled image picker');
+        } else if (response.errorCode) {
+          console.log('ImagePicker Error: ', response.errorCode);
+        } else {
+          console.log('Unknown error', response.errorMessage);
+        }
+      },
+    );
   };
 
   if (!size || !variant) {
@@ -51,29 +78,40 @@ export function Editor() {
 
   return (
     <View style={styles.container}>
+      <TextInput style={styles.input} onChangeText={setTitle} value={title} />
+      <TextInput
+        style={styles.input}
+        onChangeText={setDescription}
+        value={description}
+      />
+      <Button title="Upload Image" onPress={uploadImg} />
       <GestureHandler>
         <View style={[styles.canvas, { width, height }]}>
           <Canvas style={{ height, width }} ref={ref}>
-            <ColorBackdropView
-              params={variant.backdrop}
-              width={width}
-              height={height}
-            />
+            {uploadedImg ? (
+              <ImageView base64={uploadedImg} canvasSize={{ width, height }} />
+            ) : (
+              <ColorBackdropView
+                params={variant.backdrop}
+                canvasSize={{ width, height }}
+              />
+            )}
             <TextView
-              size={size}
+              canvasSize={{ width, height }}
+              font={customFontMgr}
               params={variant.description}
               text={description}
-              font={customFontMgr}
             />
             <TextView
+              canvasSize={{ width, height }}
               font={customFontMgr}
-              size={size}
               params={variant.title}
               text={title}
             />
           </Canvas>
         </View>
       </GestureHandler>
+      <Button title="Share" onPress={submit} />
     </View>
   );
 }
@@ -81,6 +119,7 @@ export function Editor() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    paddingHorizontal: 16,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#fff',
@@ -90,5 +129,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#ccc',
     borderRadius: 8,
+  },
+  input: {
+    padding: 8,
+    width: '100%',
+    borderWidth: StyleSheet.hairlineWidth,
+    marginBottom: 24,
   },
 });
